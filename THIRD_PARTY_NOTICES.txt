@@ -1,0 +1,6 @@
+JSZip 3.10.1
+Copyright (c) Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso
+License: MIT OR GPL-3.0-or-later
+Upstream project: https://github.com/Stuk/jszip
+
+This project bundles JSZip locally so backup export/import works without an internet connection.

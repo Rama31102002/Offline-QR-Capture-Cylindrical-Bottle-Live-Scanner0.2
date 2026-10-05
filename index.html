@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#176b63">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Offline QR Capture</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong id="appTitle">Offline QR Capture</strong>
+      <small id="userBadge" class="subtle"></small>
+    </div>
+    <div class="top-actions">
+      <span id="offlineBadge" class="badge ok">OFFLINE READY</span>
+      <button id="installBtn" class="button secondary hidden" type="button">Install App</button>
+    </div>
+  </header>
+
+  <main id="app" class="shell">
+    <section id="setupView" class="view hidden">
+      <div class="card narrow">
+        <h1>Initial Setup</h1>
+        <p class="muted">Register this device and create the first local administrator. This setup is stored only on this device.</p>
+
+        <div id="restoreDeviceBlock" class="card inner">
+          <h2>Restoring This Device?</h2>
+          <p class="muted small">If this device was reinstalled or reset and you previously saved a Device Snapshot file (Admin → Device Snapshot Backup), restore it here instead of creating a new administrator below. This recovers every local user, this device's settings, and the administrator recovery code — the same as before the reinstall. Captured record photos are recovered separately, from your regular record exports.</p>
+          <label>Device Snapshot File<input id="restoreSnapshotFile" type="file" accept="application/json,.json"></label>
+          <label>Snapshot Password<input id="restoreSnapshotPassword" type="password" autocomplete="off"></label>
+          <button id="restoreSnapshotBtn" class="button full" type="button">Restore Device From Snapshot</button>
+          <p id="restoreMsg" class="message"></p>
+        </div>
+        <div class="row" style="justify-content:center"><span class="muted small">— or set up a brand-new device —</span></div>
+
+        <form id="setupForm">
+          <h2>Device Registration</h2>
+          <label>Device Code<input id="setupDeviceCode" required maxlength="40" placeholder="TAB-001"></label>
+          <label>Device Name<input id="setupDeviceName" required maxlength="100" placeholder="Storage Lab Tablet 01"></label>
+          <label>Device Location / Department<input id="setupDeviceLocation" maxlength="120" placeholder="Storage Laboratory"></label>
+          <h2>Administrator</h2>
+          <label>Administrator User ID<input id="setupCode" required maxlength="80" placeholder="ADMIN001"></label>
+          <label>Administrator Name<input id="setupName" required maxlength="160" placeholder="System Administrator"></label>
+          <label>Administrator Username<input id="setupUsername" required maxlength="80" autocomplete="username" placeholder="admin"></label>
+          <label>Password<input id="setupPassword" type="password" minlength="8" required autocomplete="new-password"></label>
+          <label>Confirm Password<input id="setupPassword2" type="password" minlength="8" required autocomplete="new-password"></label>
+          <button class="button primary full" type="submit">Create Administrator</button>
+          <p id="setupMsg" class="message"></p>
+        </form>
+        <div id="recoveryKit" class="card inner hidden">
+          <h2>Administrator Recovery Code</h2>
+          <p class="warning">Save this code outside the tablet. It can reset the local administrator password if it is forgotten.</p>
+          <div id="recoveryCodeText" class="recovery-code"></div>
+          <button id="downloadRecoveryBtn" class="button full" type="button">Download Recovery File</button>
+          <button id="continueToLoginBtn" class="button primary full" type="button">I Saved the Recovery Code — Continue</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="loginView" class="view hidden">
+      <div class="card narrow">
+        <h1>Sign In</h1>
+        <p class="muted">All login checks happen locally on this device.</p>
+        <form id="loginForm">
+          <label>Username<input id="loginUsername" required autocomplete="username"></label>
+          <label>Password
+            <div class="input-row"><input id="loginPassword" type="password" required autocomplete="current-password"><button id="togglePassword" type="button" class="button secondary">Show</button></div>
+          </label>
+          <button class="button primary full" type="submit">Login</button>
+          <button id="recoverAdminBtn" class="button secondary full" type="button">Recover Administrator Password</button>
+          <p class="muted small">Use the recovery code saved during first-time setup. Recovery works only on this device.</p>
+          <p id="loginMsg" class="message"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="dashboardView" class="view hidden">
+      <div class="card hero">
+        <h1>Dashboard</h1>
+        <p><strong>User ID:</strong> <span id="dashUserCode"></span></p>
+        <p><strong>Name:</strong> <span id="dashName"></span></p>
+        <p><strong>Role:</strong> <span id="dashRole"></span></p>
+        <p><strong>Device:</strong> <span id="dashDevice"></span></p>
+        <p class="muted"><span id="versionText"></span></p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Today</span><strong id="todayCount">0</strong></div>
+        <div class="stat"><span>Your Records</span><strong id="userCount">0</strong></div>
+        <div class="stat"><span>Storage</span><strong id="storageText">—</strong></div>
+      </div>
+      <div class="card actions-card">
+        <button id="newScanBtn" class="button primary big full" type="button">New Scan</button>
+        <button id="viewRecordsBtn" class="button full" type="button">View Records</button>
+        <button id="exportMineBtn" class="button full" type="button">Export New Records</button>
+        <button id="reexportMineBtn" class="button secondary full" type="button">Re-export My Records</button>
+        <button id="adminBtn" class="button full hidden" type="button">Admin</button>
+        <button id="logoutBtn" class="button danger full" type="button">Log Out</button>
+      </div>
+      <div id="backupReminder" class="card warning hidden"></div>
+    </section>
+
+    <section id="scanView" class="view hidden">
+      <div class="card">
+        <div class="row between"><div><h1>New Scan</h1><p class="muted">User: <strong id="scanUserCode"></strong></p></div><button id="scanBackBtn" class="button secondary" type="button">Back</button></div>
+        <p>Point the camera at the bottle and keep <strong>one Label A</strong> and <strong>one Label B</strong> visible in the same frame. Scanning is automatic. The app continuously tries cylindrical un-distortion presets until both valid labels are decoded.</p>
+        <div id="cameraStage" class="camera-stage live-scan-stage">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <div class="scan-guide" aria-hidden="true"><div class="scan-guide-box"></div></div>
+        </div>
+        <div class="scan-status-grid" aria-live="polite">
+          <div id="labelAStatus" class="scan-status"><span>Label A</span><strong>Searching...</strong></div>
+          <div id="labelBStatus" class="scan-status"><span>Label B</span><strong>Searching...</strong></div>
+        </div>
+        <div id="cameraControls" class="actions">
+          <button id="switchCameraBtn" class="button secondary big" type="button">Switch Camera</button>
+          <button id="torchBtn" class="button secondary big hidden" type="button">Torch Off</button>
+          <button id="cancelScanBtn" class="button danger big" type="button">Cancel</button>
+        </div>
+        <div id="processPanel" class="process hidden"><div class="spinner"></div><strong id="processText">Processing...</strong></div>
+        <p id="scanMsg" class="message"></p>
+      </div>
+    </section>
+
+    <section id="successView" class="view hidden">
+      <div class="card narrow success-card">
+        <div class="success-icon">✓</div>
+        <h1>Record Saved Locally</h1>
+        <div id="successDetails" class="details"></div>
+        <button id="successNewBtn" class="button primary full" type="button">New Scan</button>
+        <button id="successViewBtn" class="button full" type="button">View Record</button>
+        <button id="successDashBtn" class="button secondary full" type="button">Dashboard</button>
+      </div>
+    </section>
+
+    <section id="recordsView" class="view hidden">
+      <div class="card">
+        <div class="row between"><div><h1 id="recordsHeading">My Records</h1><p id="recordsSub" class="muted"></p></div><button id="recordsBackBtn" class="button secondary" type="button">Back</button></div>
+        <div class="filters">
+          <label>Search QR<input id="recordSearch" placeholder="QR text"></label>
+          <label>From<input id="recordFrom" type="date"></label>
+          <label>To<input id="recordTo" type="date"></label>
+          <label>Sort<select id="recordSort"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label>
+          <label id="adminUserFilterWrap" class="hidden">User<select id="adminUserFilter"><option value="">All users</option></select></label>
+        </div>
+        <div class="row"><button id="listModeBtn" class="button secondary" type="button">List</button><button id="galleryModeBtn" class="button secondary" type="button">Gallery</button></div>
+        <div class="engine-legend" aria-label="Engine side color legend"><span class="legend-chip legend-left">LH / Left engine</span><span class="legend-chip legend-right">RH / Right engine</span><span class="legend-chip legend-unknown">? / Unknown side</span></div>
+        <p class="muted small">Records are grouped by capture date. Engine-side colors are a visual review aid and do not automatically mark a record as incorrect.</p>
+        <div id="recordsList" class="records-list"></div>
+        <button id="loadMoreBtn" class="button full hidden" type="button">Load More</button>
+        <p id="recordsMsg" class="message"></p>
+      </div>
+    </section>
+
+    <section id="detailView" class="view hidden">
+      <div class="card">
+        <div class="row between"><h1>Record Details</h1><button id="detailBackBtn" class="button secondary" type="button">Back</button></div>
+        <img id="detailImage" class="detail-image" alt="Saved capture">
+        <div id="detailMeta" class="details"></div>
+        <button id="engineHoursBtn" class="button full" type="button">Add / Update Engine Hours</button>
+        <button id="deleteRecordBtn" class="button danger full hidden" type="button">Pseudo-delete Record</button>
+      </div>
+    </section>
+
+    <section id="adminView" class="view hidden">
+      <div class="card">
+        <div class="row between"><div><h1>Admin</h1><p class="muted">Manage local users, settings and records.</p></div><button id="adminBackBtn" class="button secondary" type="button">Back</button></div>
+        <div class="admin-grid">
+          <form id="createUserForm" class="inner card">
+            <h2>Create User</h2>
+            <label>User ID<input id="newUserCode" required maxlength="80"></label>
+            <label>Full Name<input id="newUserName" required maxlength="160"></label>
+            <label>Username<input id="newUsername" required maxlength="80"></label>
+            <label>Password<input id="newUserPassword" type="password" minlength="8" required></label>
+            <label>Role<select id="newUserRole"><option value="user">User</option><option value="admin">Admin</option></select></label>
+            <button class="button primary full" type="submit">Create User</button>
+          </form>
+          <div class="inner card">
+            <h2>Settings</h2>
+            <label>GPS Required<select id="gpsRequired"><option value="1">Yes</option><option value="0">No</option></select></label>
+            <label>Image max width<input id="imageMaxWidth" type="number" min="640" max="4096" value="1600"></label>
+            <label>JPEG quality (0.50–0.95)<input id="jpegQuality" type="number" min="0.5" max="0.95" step="0.05" value="0.8"></label>
+            <label>User may pseudo-delete records<select id="allowUserDelete"><option value="0">No</option><option value="1">Yes</option></select></label>
+            <label>Device Code<input id="deviceCode" maxlength="40"></label>
+            <label>Device Name<input id="deviceName" maxlength="100"></label>
+            <label>Device Location<input id="deviceLocation" maxlength="120"></label>
+            <label>Oil Specification<input id="oilSpec" maxlength="80" value="Turbonic210A"></label>
+            <button id="saveSettingsBtn" class="button primary full" type="button">Save Settings</button>
+          </div>
+        </div>
+        <p id="adminMsg" class="message"></p>
+
+        <h2>Existing Users</h2>
+        <div class="tablewrap"><table><thead><tr><th>User ID</th><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody id="usersTable"></tbody></table></div>
+
+        <div class="card inner">
+          <h2>Device Snapshot Backup (Reinstall Recovery)</h2>
+          <p class="muted">Creates one encrypted file with every local user, this device's settings, and the administrator recovery verifier/state — everything a fresh install needs to restore the same local logins and device identity if it's ever uninstalled, reset, or replaced. It does not include captured record photos; use the exports above/below for those. Take a fresh snapshot any time users or settings change.</p>
+          <p id="snapshotReminderMsg" class="muted small"></p>
+          <div class="actions"><button id="exportSnapshotBtn" class="button" type="button">Export Device Snapshot</button></div>
+          <p id="snapshotMsg" class="message"></p>
+        </div>
+
+        <div class="card inner">
+          <h2>Multi-Device User Provisioning</h2>
+          <p class="muted">Export the local user list as an encrypted package and import it on another authorized tablet. Device registration remains unique on each tablet.</p>
+          <div class="actions">
+            <button id="exportUsersBtn" class="button" type="button">Export Users Package</button>
+            <button id="importUsersBtn" class="button" type="button">Import Users Package</button>
+            <input id="importUsersFile" type="file" accept="application/json,.json" class="hidden">
+          </div>
+          <p id="provisionMsg" class="message"></p>
+        </div>
+
+        <div class="card inner">
+          <h2>Local Data</h2>
+          <div class="actions"><button id="viewAllRecordsBtn" class="button" type="button">View All Records</button><button id="exportAllPendingBtn" class="button" type="button">Export New Records (All Users)</button><button id="reexportAllBtn" class="button secondary" type="button">Re-export All Records</button></div>
+          <p class="muted">Exports create a batch ID but do not permanently mark records as delivered. Records remain re-exportable. Each ZIP is limited to 100 records and approximately 120 MB of source images. Pseudo-deleted records are excluded.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/jszip.min.js"></script>
+  <script src="assets/time.js"></script>
+  <script src="assets/db.js"></script>
+  <script src="assets/auth.js"></script>
+  <script src="assets/camera.js"></script>
+  <script src="assets/dewarp.js"></script>
+  <script src="assets/label-schema.js"></script>
+  <script src="assets/qr-reader.js"></script>
+  <script src="assets/backup.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
