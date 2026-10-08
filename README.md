@@ -86,7 +86,7 @@ Host all files at the HTTPS site root (GitHub Pages is suitable). `index.html`, 
 The blue/green styling is a visual review aid only. Consecutive same-side records are **not automatically declared incorrect**, because legitimate workflows may sometimes contain repeated engine sides.
 
 
-## Release 0.6 - reliability fixes
+## Release 0.1 - reliability fixes
 
 - Exact successful camera frame is retained and saved; no fresh frame is captured after QR success.
 - Scanner worker continues until one valid Label A and one valid Label B are found in the same original frame.
